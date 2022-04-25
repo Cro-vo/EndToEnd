@@ -48,7 +48,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Running device is {device.type}")
 
 # 定义writer
-writer = SummaryWriter("logs")
+# writer = SummaryWriter("logs")
 
 # 使用默认参数构建模型
 model = StegNet()
@@ -75,15 +75,16 @@ for epoch in range(configs['epoch_num']):
     model.train()
 
 # 记录batch数
-    step = 0
+#     step = 0
+
     for batch in tqdm(train_dataset_loader, desc=f"Train Epoch: {epoch}"):
         # 使用数据集的图像部分作为本模型的训练数据
         train_data, _ = [x.to(device) for x in batch]
         # 将一半数据作为host 另一半数据作为guest
         host_img = train_data[0:int(train_data.shape[0] / 2)]
         guest_img = train_data[int(train_data.shape[0] / 2):]
-        writer.add_images("host", host_img, step)
-        writer.add_images("guest", guest_img, step)
+        # writer.add_images("host", host_img, step)
+        # writer.add_images("guest", guest_img, step)
         # 使用guest的一个通道作为载密图像
         guest_img = torch.tensor([x[0].tolist() for x in guest_img]).unsqueeze(1).to(device)
 
@@ -100,7 +101,7 @@ for epoch in range(configs['epoch_num']):
         optimizer.step()
         train_loss = train_loss + loss.item()
 
-        step += 1
+        # step += 1
 
     else:
         val_loss = 0
@@ -141,4 +142,4 @@ for epoch in range(configs['epoch_num']):
                                                           f"_encoderWeight{configs['encoder_weight']}"
                                                           f"_decoderWeight{configs['decoder_weight']}.pth")
 
-writer.close()
+# writer.close()
