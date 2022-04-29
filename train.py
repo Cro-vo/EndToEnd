@@ -15,10 +15,10 @@ configs = {
     'guest_channels': 1,
     'img_width': 32,
     'img_height': 32,
-    'epoch_num': 50,
-    'train_batch_size': 256,
+    'epoch_num': 100,
+    'train_batch_size': 64,
     'val_batch_size': 64,
-    'encoder_weight': 1,
+    'encoder_weight': 1.2,
     'decoder_weight': 1,
     'model_path': '/content/drive/MyDrive/MyModels/End_to_end_Stegnography_2017',
     'learning_rate': 1e-4
@@ -126,8 +126,10 @@ for epoch in range(configs['epoch_num']):
                 loss = encoder_loss + decoder_loss
                 val_loss = val_loss + loss.item()
 
-    train_loss = train_loss / len(train_dataset_loader)
-    val_loss = val_loss / len(val_dataset_loader)
+    # train_loss = train_loss / len(train_dataset_loader)
+    # val_loss = val_loss / len(val_dataset_loader)
+    train_loss = train_loss
+    val_loss = val_loss
     print(f"Epoch {epoch} train_loss: {train_loss}")
     print(f"Epoch {epoch} val_loss: {val_loss}")
     if val_loss <= min_val_loss:
