@@ -13,18 +13,19 @@ from change_size import scale_down
 
 # 展示模型效果
 def addToTensorboard(host, guest):
+    guest = guest.convert("1")
     # 图像原始的大小
     host_H = host.size[1]
     host_W = host.size[0]
     guest_H = guest.size[0]
 
-
     host_tensor = transforms.ToTensor()(host)
     guest_tensor = transforms.ToTensor()(guest)
+    # print(guest_tensor.shape)
 
     # 秘密图像取灰度图
-    if (guest_tensor.shape[0] != 1):
-        guest_tensor = transforms.Grayscale(num_output_channels=1)(guest_tensor)
+    # if (guest_tensor.shape[0] != 1):
+    #     guest_tensor = transforms.Grayscale(num_output_channels=1)(guest_tensor)
 
 
     # host_resize = transforms.Resize((H, W))(host_tensor)
@@ -65,16 +66,16 @@ configs = {
     'img_width': 32,
     'img_height': 32,
     'epoch_num': 50,
-    'train_batch_size': 64,
+    'train_batch_size': 32,
     'val_batch_size': 64,
-    'encoder_weight': 1,
+    'encoder_weight': 1.2,
     'decoder_weight': 1,
     'model_path': 'modules',
     'learning_rate': 1e-4
 }
 
 
-writer = SummaryWriter("logs2")
+writer = SummaryWriter("logs5")
 
 model = StegNet()
 model.load_model(configs['model_path'], file_name=f"steg_net"
@@ -90,11 +91,13 @@ model.load_model(configs['model_path'], file_name=f"steg_net"
                                                   f".pth")
 
 
-host_src = "pics/DSC07738.jpg"
-guest_src = "pics/QR1000_1000.png"
+host_src = "pics/DSC07730.jpg"
+guest_src = "pics/QR1000.png"
 cache_src = "cache/temp.jpg"
 host = Image.open(host_src)
 guest = Image.open(guest_src)
+
+
 # 判断图片是否过大
 if (max(host.size[0], host.size[1]) > 3000):
     # 压缩图片
@@ -106,6 +109,14 @@ if (max(host.size[0], host.size[1]) > 3000):
 if (transforms.ToTensor()(host).shape[0] == 4):
     r, g, b, a = host.split()
     host = Image.merge("RGB", (r, g, b))
+if (transforms.ToTensor()(guest).shape[0] == 4):
+    r, g, b, a = guest.split()
+    guest = Image.merge("RGB", (r, g, b))
+    # guest.save("cache/t.png")
+
+# 变为单通道黑白图
+guest = guest.convert("1")
+# guest.save("cache/bw.jpg")
 
 addToTensorboard(host, guest)
 

@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from PIL.Image import Image
 from tqdm import tqdm
 from torch import nn
 import torchvision
@@ -25,19 +26,19 @@ configs = {
 }
 
 # 下载训练图像数据
-cifar10_data = datasets.CIFAR10('./CIFAR10_data/', download=True, train=True).data
+cifar10_data = datasets.CIFAR10('dataset/CIFAR10_data/', download=True, train=True).data
 
 # 定义图像数据转换
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize((0.5,), (0.5,))])
 # 建立训练数据集
-train_dataset = datasets.CIFAR10('./CIFAR10_data/', download=True, transform=transform)
+train_dataset = datasets.CIFAR10('dataset/CIFAR10_data/', download=True, transform=transform)
 train_dataset.data = cifar10_data[0:int(50000 * configs['train_rate'])]
 train_dataset_loader = DataLoader(train_dataset,
                                   batch_size=configs['train_batch_size'],
                                   shuffle=True)
 # 建立验证数据集
-val_dataset = datasets.CIFAR10('./CIFAR10_data/', download=True, transform=transform)
+val_dataset = datasets.CIFAR10('dataset/CIFAR10_data/', download=True, transform=transform)
 val_dataset.data = cifar10_data[int(50000 * configs['train_rate']):]
 val_dataset_loader = DataLoader(val_dataset,
                                 batch_size=configs['val_batch_size'],
@@ -85,17 +86,30 @@ for epoch in range(configs['epoch_num']):
         guest_img = train_data[int(train_data.shape[0] / 2):]
         # writer.add_images("host", host_img, step)
         # writer.add_images("guest", guest_img, step)
+        # print(guest_img.shape) # (32,3,32,32)
         # 使用guest的一个通道作为载密图像
-        guest_img = torch.tensor([x[0].tolist() for x in guest_img]).unsqueeze(1).to(device)
+        # guest_img = torch.tensor([x[0].tolist() for x in guest_img]).unsqueeze(1).to(device)
+
+        # 使用黑白图
+        ten = torch.ones([1, 1, 32, 32]).to(device)
+        for x in guest_img:
+            img = transforms.ToPILImage()(x)
+            img = img.convert("1")
+            img = torch.unsqueeze(transforms.ToTensor()(img).to(device), 0)
+            ten = torch.cat((ten, img), 0)
+            # print(img.shape)
+
+        ten = ten[0:-1, ...]
+
 
         optimizer.zero_grad()
-        encoder_out, decoder_out = model(host_img, guest_img)
+        encoder_out, decoder_out = model(host_img, ten)
 
         # 计算均方差损失
         encoder_loss = criterion(encoder_out.view(-1, configs['img_width'] * configs['img_height']),
                                  host_img.view(-1, configs['img_width'] * configs['img_height']))
         decoder_loss = criterion(decoder_out.view(-1, configs['img_width'] * configs['img_height']),
-                                 guest_img.view(-1, configs['img_width'] * configs['img_height']))
+                                 ten.view(-1, configs['img_width'] * configs['img_height']))
         loss = configs['encoder_weight'] * encoder_loss + configs['decoder_weight'] * decoder_loss
         loss.backward()
         optimizer.step()
@@ -114,15 +128,26 @@ for epoch in range(configs['epoch_num']):
                 host_img = val_data[0:int(val_data.shape[0] / 2)]
                 guest_img = val_data[int(val_data.shape[0] / 2):]
                 # 使用guest的一个通道作为载密图像
-                guest_img = torch.tensor([x[0].tolist() for x in guest_img]).unsqueeze(1).to(device)
+                # guest_img = torch.tensor([x[0].tolist() for x in guest_img]).unsqueeze(1).to(device)
 
-                encoder_out, decoder_out = model(host_img, guest_img)
+                # 使用黑白图
+                ten = torch.ones([1, 1, 32, 32]).to(device)
+                for x in guest_img:
+                    img = transforms.ToPILImage()(x)
+                    img = img.convert("1")
+                    img = torch.unsqueeze(transforms.ToTensor()(img).to(device), 0)
+                    ten = torch.cat((ten, img), 0)
+                    # print(img.shape)
+
+                ten = ten[0:-1, ...]
+
+                encoder_out, decoder_out = model(host_img, ten)
 
                 # 计算均方差损失
                 encoder_loss = metric(encoder_out.view(-1, configs['img_width'] * configs['img_height']),
                                       host_img.view(-1, configs['img_width'] * configs['img_height']))
                 decoder_loss = metric(decoder_out.view(-1, configs['img_width'] * configs['img_height']),
-                                      guest_img.view(-1, configs['img_width'] * configs['img_height']))
+                                      ten.view(-1, configs['img_width'] * configs['img_height']))
                 loss = encoder_loss + decoder_loss
                 val_loss = val_loss + loss.item()
 
